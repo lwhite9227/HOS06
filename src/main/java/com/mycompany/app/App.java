@@ -10,16 +10,35 @@ class BankAccount {
 
     // Synchronized to prevent race conditions
     public synchronized void withdraw(String user, int amount) {
+        System.out.println(user + " is trying to withdraw $" + amount);
         if (balance >= amount) {
-            System.out.println(user + " is trying to withdraw $" + amount);
-            try { Thread.sleep(100); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             balance -= amount;
             System.out.println(user + " completed withdrawal. Remaining balance: $" + balance);
         } else {
             System.out.println(user + " tried to withdraw $" + amount + " but insufficient funds. Balance: $" + balance);
         }
     }
-}    
+
+    public synchronized void deposit(String user, int amount) {
+        System.out.println(user + " is depositing $" + amount);
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        balance += amount;
+        System.out.println(user + " completed deposit. New balance: $" + balance);
+    }
+
+    public synchronized int getBalance() {
+        return balance;
+    }
+}
 
 class User implements Runnable {
     private BankAccount account;
@@ -31,14 +50,18 @@ class User implements Runnable {
     }
 
     public void run() {
-        for (int i = 0; i < 2; i++) {  // Each user tries to withdraw twice
-            account.withdraw(userName, 60);
+        for (int i = 0; i < 2; i++) {
+            if (i % 2 == 0) {
+                account.deposit(userName, 50);
+            } else {
+                account.withdraw(userName, 60);
+            }
         }
     }
 }
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         BankAccount sharedAccount = new BankAccount();
 
         Thread user1 = new Thread(new User(sharedAccount, "Alice"));
@@ -46,5 +69,10 @@ public class App {
 
         user1.start();
         user2.start();
+
+        user1.join();
+        user2.join();
+
+        System.out.println("Final balance: $" + sharedAccount.getBalance());
     }
 }
